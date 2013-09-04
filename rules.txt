@@ -1,0 +1,4 @@
+education --> educationnumber
+occupation | country --> hours
+if hours<=20 --> salary <=50 or if hours >=60 ---> >50
+occupation | country | hours --> salary
