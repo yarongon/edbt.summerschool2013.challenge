@@ -54,6 +54,10 @@ public class DataCleanMR {
 			
 			// Rule 2
 			
+			outKey.set("2,"+valueArray[6]+","+valueArray[13]); // rule id, value of left-hand-site
+			outValue.set(valueArray[15] + "," + valueArray[12]); // tuple id, tuple value			
+			context.write(outKey, outValue);
+			
 		}
 	}
 	
@@ -75,20 +79,16 @@ public class DataCleanMR {
 			String previousAttrValue = null;
 			String[] splittedValues;
 			String violation;
+			
+			
 			for (Text value : values) {
 				splittedValues = value.toString().split(",");
 				String attrValue = splittedValues[1]; 
 				if (previousAttrValue == null) {
 					previousAttrValue = attrValue;
 				}
-				violation = String.format("%d;%d;%s;%d;%s;%s",
-						reducerId,
-						ruleId,
-						"adult",
-						Integer.parseInt(splittedValues[0]),
-						"educationNum",
-						attrValue
-						);
+				
+				violation = generateVialotionTableRaw(ruleId, reducerId, Integer.parseInt(splittedValues[0]), attrValue);
 				
 				violationTable.add(new Text(violation));
 				
@@ -103,6 +103,36 @@ public class DataCleanMR {
 					context.write(v, null);
 				}
 			}
+			violationTable = null;
+		}
+		
+		private String generateVialotionTableRaw(int ruleId, int reducerId, int tupleId, String attrValue){
+			String result = "";
+			switch(ruleId){
+				case 1:
+					result = String.format("%d;%d;%s;%d;%s;%s",
+							reducerId,
+							ruleId,
+							"adult",
+							tupleId,
+							"educationNum",
+							attrValue
+						);
+					break;
+				case 2:
+					result = String.format("%d;%d;%s;%d;%s;%s",
+							reducerId,
+							ruleId,
+							"adult",
+							tupleId,
+							"hoursperweek",
+							attrValue
+						);
+					break;
+				default:
+					result = "";
+			}
+			return result;
 		}
 	}
 
