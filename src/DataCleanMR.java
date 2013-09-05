@@ -15,20 +15,21 @@ import org.apache.hadoop.util.GenericOptionsParser;
 
 /**
  * Attributes
- *  1. age
- *  2. workclass
- *  3. fnlwgt
- *  4. education
- *  5. education-num
- *  6. marital-status
- *  7. occupation
- *  8. relationship
- *  9. race
- * 10. sex
- * 11. capital-gain
- * 12. capital-loss
- * 13. hours-per-week
- * 14. native-country
+ *  1. age int,
+ *  2. workclass varchar(255),
+ *  3. fnlwgt int,
+ *  4. education varchar(255),
+ *  5. educationnum int,
+ *  6. martialstatus varchar(255),
+ *  7. occupation varchar(255), 
+ *  8. relationship varchar(255),
+ *  9. race varchar(255),
+ *  10. sex varchar(255), 
+ *  11. capitalgain int, 
+ *  12. capitalloss int, 
+ *  13. hoursperweek int, 
+ *  14. nativecountry varchar(255), 
+ *  15. agrossincome varchar(255)
  * 
  * The rules: 
  *   1. education --> educationnumber
@@ -72,17 +73,19 @@ public class DataCleanMR {
 			int reducerId = context.getTaskAttemptID().getTaskID().getId();
 			Set<Text> violationTable = new HashSet<Text>();
 			String previousAttrValue = null;
-			
+			String[] splittedValues;
+			String violation;
 			for (Text value : values) {
-				String attrValue = value.toString().split(",")[1]; 
+				splittedValues = value.toString().split(",");
+				String attrValue = splittedValues[1]; 
 				if (previousAttrValue == null) {
 					previousAttrValue = attrValue;
 				}
-				String violation = String.format("%d;%d;%s;%d;%s;%s",
+				violation = String.format("%d;%d;%s;%d;%s;%s",
 						reducerId,
 						ruleId,
 						"adult",
-						Integer.parseInt(value.toString().split(",")[0]),
+						Integer.parseInt(splittedValues[0]),
 						"educationNum",
 						attrValue
 						);
@@ -96,8 +99,8 @@ public class DataCleanMR {
 			}
 			
 			if (violationOccured) {
-				for (Text violation : violationTable) {
-					context.write(violation, null);
+				for (Text v : violationTable) {
+					context.write(v, null);
 				}
 			}
 		}
