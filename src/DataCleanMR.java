@@ -46,6 +46,7 @@ public class DataCleanMR {
 
 		public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
 			String[] valueArray = value.toString().split(",");
+			int hours = Integer.parseInt(valueArray[12]);
 			
 			// Rule 1
 			outKey.set("1," + valueArray[3]); // rule id, value of left-hand-site
@@ -55,9 +56,16 @@ public class DataCleanMR {
 			// Rule 2
 			
 			outKey.set("2,"+valueArray[6]+","+valueArray[13]); // rule id, value of left-hand-site
-			outValue.set(valueArray[15] + "," + valueArray[12]); // tuple id, tuple value			
+			outValue.set(valueArray[15] + "," + hours); // tuple id, tuple value			
 			context.write(outKey, outValue);
 			
+			//Rule 3
+			String salary = valueArray[14];
+			if((hours<=20 && !salary.equals("<=50K")) || (hours>=60 && !salary.equals(">50K"))){
+				outKey.set("3,"+hours); // rule id, value of left-hand-site
+				outValue.set(valueArray[15] + "," + salary); // tuple id, tuple value			
+				context.write(outKey, outValue);
+			}
 		}
 	}
 	
@@ -126,6 +134,16 @@ public class DataCleanMR {
 							"adult",
 							tupleId,
 							"hoursperweek",
+							attrValue
+						);
+					break;
+				case 3:
+					result = String.format("%d;%d;%s;%d;%s;%s",
+							reducerId,
+							ruleId,
+							"adult",
+							tupleId,
+							"agrossincome",
 							attrValue
 						);
 					break;
