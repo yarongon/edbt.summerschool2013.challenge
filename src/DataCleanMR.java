@@ -49,6 +49,11 @@ public class DataCleanMR {
 		private LongStringPairWritable outValue = new LongStringPairWritable();
 
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+			if (key.get() == 0) {
+				// this means that this is the first row.
+				return;
+			}
+			
 			String[] valueArray = value.toString().split(",");
 			String hoursStr = valueArray[12];
 			int hours = Integer.parseInt(hoursStr);
