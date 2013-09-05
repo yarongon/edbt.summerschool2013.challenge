@@ -75,25 +75,13 @@ public class DataCleanMR {
 			 * occupation | country --> hours
 			 * */
 			String occupationCountryKey = valueArray[6]+","+valueArray[13]; // occupation + country
+			String salary = valueArray[14];
 			outKey.setInt(2);
 			outKey.setString(occupationCountryKey);
 
 			outValue.setString(hoursStr);
 			context.write(outKey, outValue);
 			
-			/*
-			 * Rule 3:
-			 * if hours <= 20 --> salary <= 50 or if hours >= 60 ---> >50
-			 * */
-			String salary = valueArray[14];
-			if((hours<=20 && !salary.equals("<=50K")) || (hours>=60 && !salary.equals(">50K"))){
-				outKey.setInt(3);
-				outKey.setString(valueArray[12]); // hours
-
-				outValue.setString(salary);
-				context.write(outKey, outValue);
-			}
-		
 			/*
 			 * Rule 4
 			 * occupation | country | hours --> salary
@@ -103,6 +91,20 @@ public class DataCleanMR {
 
 			outValue.setString(salary);
 			context.write(outKey, outValue);
+			
+			/*
+			 * Rule 3:
+			 * if hours <= 20 --> salary <= 50 or if hours >= 60 ---> >50
+			 * */
+			if((hours<=20 && !salary.equals("<=50K")) || (hours>=60 && !salary.equals(">50K"))){
+				outKey.setInt(3);
+				outKey.setString(valueArray[12]); // hours
+
+				outValue.setString(salary);
+				context.write(outKey, outValue);
+			}
+		
+			
 		}
 	}
 	
@@ -139,10 +141,10 @@ public class DataCleanMR {
 				
 				violationTable.add(new Text(violation));
 				
-				if (!attrValue.equals(previousAttrValue)) {
+				if (!violationOccured && !attrValue.equals(previousAttrValue)) {
 					violationOccured = true;
 				}
-				previousAttrValue = attrValue;
+				//previousAttrValue = attrValue;
 			}
 			
 			if (violationOccured) {
