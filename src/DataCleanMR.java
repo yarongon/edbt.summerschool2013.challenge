@@ -49,29 +49,43 @@ public class DataCleanMR {
 		public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
 			String[] valueArray = value.toString().split(",");
 			int hours = Integer.parseInt(valueArray[12]);
+			int tupleId = Integer.parseInt(valueArray[15]);
 			
-			// Rule 1
-			outKey.set("1," + valueArray[3]); // rule id, value of left-hand-site
-			outValue.set(valueArray[15] + "," + valueArray[4]); // tuple id, tuple value			
+			/*
+			 * Rule 1:
+			 * education --> educationnumber
+			 * */
+			outKey.set("1," + valueArray[3]); // rule id,  value of left-hand-site 
+			outValue.set(tupleId + "," + valueArray[4]); // tuple id, tuple value (educationnumber)			
 			context.write(outKey, outValue);
 			
-			// Rule 2
-			
-			outKey.set("2,"+valueArray[6]+","+valueArray[13]); // rule id, value of left-hand-site
-			outValue.set(valueArray[15] + "," + hours); // tuple id, tuple value			
+			/*
+			 * Rule 2:
+			 * occupation | country --> hours
+			 * */
+			String occupationCountryKey = valueArray[6]+","+valueArray[13]; // occupation + country
+			outKey.set("2,"+occupationCountryKey); // rule id, value of left-hand-site
+			outValue.set(tupleId + "," + hours); // tuple id, tuple value			
 			context.write(outKey, outValue);
 			
-			//Rule 3
+			/*
+			 * Rule 3:
+			 * if hours <= 20 --> salary <= 50 or if hours >= 60 ---> >50
+			 * */
 			String salary = valueArray[14];
+			String vialationSalary = tupleId + "," + salary;// tuple id, tuple value			
 			if((hours<=20 && !salary.equals("<=50K")) || (hours>=60 && !salary.equals(">50K"))){
 				outKey.set("3,"+hours); // rule id, value of left-hand-site
-				outValue.set(valueArray[15] + "," + salary); // tuple id, tuple value			
+				outValue.set(vialationSalary); // tuple id, tuple value			
 				context.write(outKey, outValue);
 			}
 		
-			//Rule 4
-			outKey.set("4,"+valueArray[6]+","+valueArray[13] + hours); // rule id, value of left-hand-site
-			outValue.set(valueArray[15] + "," + salary); // tuple id, tuple value			
+			/*
+			 * Rule 4
+			 * occupation | country | hours --> salary
+			 * */
+			outKey.set("4,"+occupationCountryKey + hours); // rule id, value of left-hand-site
+			outValue.set(vialationSalary); // tuple id, tuple value			
 			context.write(outKey, outValue);
 		}
 	}
