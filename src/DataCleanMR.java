@@ -181,8 +181,8 @@ public class DataCleanMR {
 	public static void main(String[] args) throws Exception {
 		Configuration conf = new Configuration();
 		String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
-		if (otherArgs.length != 2) {
-			System.err.println("Usage: lineitemq1 <in> <out>");
+		if (otherArgs.length != 3) {
+			System.err.println("Usage: DataCleanMR <in> <out> <#red>");
 			System.exit(2);
 		}
 		Job job = new Job(conf, "word count");
@@ -192,7 +192,7 @@ public class DataCleanMR {
 		//job.setPartitionerClass(MyPartitioner.class);
 		//job.setCombinerClass(IntSumReducer.class);
 		job.setReducerClass(FDReducer.class);
-		job.setNumReduceTasks(16);
+		job.setNumReduceTasks(Integer.parseInt(args[2]));
 		job.setOutputKeyClass(IntStringPairWritable.class);
 		job.setOutputValueClass(LongStringPairWritable.class);
 		FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
