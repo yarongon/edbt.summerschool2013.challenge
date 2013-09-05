@@ -66,6 +66,11 @@ public class DataCleanMR {
 				outValue.set(valueArray[15] + "," + salary); // tuple id, tuple value			
 				context.write(outKey, outValue);
 			}
+		
+			//Rule 4
+			outKey.set("4,"+valueArray[6]+","+valueArray[13] + hours); // rule id, value of left-hand-site
+			outValue.set(valueArray[15] + "," + salary); // tuple id, tuple value			
+			context.write(outKey, outValue);
 		}
 	}
 	
@@ -115,42 +120,29 @@ public class DataCleanMR {
 		}
 		
 		private String generateVialotionTableRaw(int ruleId, int reducerId, int tupleId, String attrValue){
-			String result = "";
+			String attributeName = "";
 			switch(ruleId){
 				case 1:
-					result = String.format("%d;%d;%s;%d;%s;%s",
-							reducerId,
-							ruleId,
-							"adult",
-							tupleId,
-							"educationNum",
-							attrValue
-						);
+					attributeName = "educationNum";
 					break;
 				case 2:
-					result = String.format("%d;%d;%s;%d;%s;%s",
-							reducerId,
-							ruleId,
-							"adult",
-							tupleId,
-							"hoursperweek",
-							attrValue
-						);
+					attributeName = "hoursperweek";
 					break;
 				case 3:
-					result = String.format("%d;%d;%s;%d;%s;%s",
-							reducerId,
-							ruleId,
-							"adult",
-							tupleId,
-							"agrossincome",
-							attrValue
-						);
+				case 4:
+					attributeName = "agrossincome";
 					break;
 				default:
-					result = "";
+					attributeName = "";
 			}
-			return result;
+			return String.format("%d;%d;%s;%d;%s;%s",
+					reducerId,
+					ruleId,
+					"adult",
+					tupleId,
+					attributeName,
+					attrValue
+				);
 		}
 	}
 
