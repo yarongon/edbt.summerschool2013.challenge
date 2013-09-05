@@ -24,12 +24,12 @@ import org.apache.hadoop.util.GenericOptionsParser;
  *  7. occupation varchar(255), 
  *  8. relationship varchar(255),
  *  9. race varchar(255),
- *  10. sex varchar(255), 
- *  11. capitalgain int, 
- *  12. capitalloss int, 
- *  13. hoursperweek int, 
- *  14. nativecountry varchar(255), 
- *  15. agrossincome varchar(255)
+ * 10. sex varchar(255), 
+ * 11. capitalgain int, 
+ * 12. capitalloss int, 
+ * 13. hoursperweek int, 
+ * 14. nativecountry varchar(255), 
+ * 15. agrossincome varchar(255)
  * 
  * The rules: 
  *   1. education --> educationnumber
@@ -39,6 +39,8 @@ import org.apache.hadoop.util.GenericOptionsParser;
 */
 public class DataCleanMR {
 
+	public static final String TABLE_NAME = "adult";
+	
 	public static class FDMapper extends Mapper<Object, Text, Text, Text> {
 
 		private Text outKey = new Text();
@@ -138,7 +140,7 @@ public class DataCleanMR {
 			return String.format("%d;%d;%s;%d;%s;%s",
 					reducerId,
 					ruleId,
-					"adult",
+					TABLE_NAME,
 					tupleId,
 					attributeName,
 					attrValue
