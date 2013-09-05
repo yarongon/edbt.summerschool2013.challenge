@@ -4,6 +4,7 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -41,15 +42,15 @@ public class DataCleanMR {
 
 	public static final String TABLE_NAME = "adult";
 	
-	public static class FDMapper extends Mapper<Object, Text, Text, Text> {
+	public static class FDMapper extends Mapper<LongWritable, Text, Text, Text> {
 
 		private Text outKey = new Text();
 		private Text outValue = new Text();
 
-		public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 			String[] valueArray = value.toString().split(",");
 			int hours = Integer.parseInt(valueArray[12]);
-			int tupleId = Integer.parseInt(valueArray[15]);
+			long tupleId = key.get(); //Integer.parseInt(valueArray[15]);
 			
 			/*
 			 * Rule 1:
@@ -102,8 +103,8 @@ public class DataCleanMR {
 	public static class FDReducer extends Reducer<Text, Text, Text, Text> {
 		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
 			boolean violationOccured = false;
-			int ruleId = Integer.parseInt(key.toString().split(",")[0]);
-			int reducerId = context.getTaskAttemptID().getTaskID().getId();
+			int ruleId = Integer.parseInt(key.toString().split(",")[0]);			
+			int violationId = context.getTaskAttemptID().getTaskID().getId();
 			Set<Text> violationTable = new HashSet<Text>();
 			String previousAttrValue = null;
 			String[] splittedValues;
@@ -117,7 +118,7 @@ public class DataCleanMR {
 					previousAttrValue = attrValue;
 				}
 				
-				violation = generateVialotionTableRaw(ruleId, reducerId, Integer.parseInt(splittedValues[0]), attrValue);
+				violation = generateVialotionTableRaw(ruleId, violationId, Integer.parseInt(splittedValues[0]), attrValue);
 				
 				violationTable.add(new Text(violation));
 				
@@ -170,12 +171,13 @@ public class DataCleanMR {
 			System.exit(2);
 		}
 		Job job = new Job(conf, "word count");
+
 		job.setJarByClass(DataCleanMR.class);
 		job.setMapperClass(FDMapper.class);
 		//job.setPartitionerClass(MyPartitioner.class);
 		//job.setCombinerClass(IntSumReducer.class);
 		job.setReducerClass(FDReducer.class);
-		job.setNumReduceTasks(10);
+		job.setNumReduceTasks(16);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(Text.class);
 		FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
