@@ -42,22 +42,25 @@ public class DataCleanMR {
 
 	public static final String TABLE_NAME = "adult";
 	
-	public static class FDMapper extends Mapper<LongWritable, Text, Text, Text> {
+	public static class FDMapper extends Mapper<LongWritable, Text, IntStringPairWritable, LongStringPairWritable> {
 
-		private Text outKey = new Text();
-		private Text outValue = new Text();
+		private IntStringPairWritable outKey    = new IntStringPairWritable();
+		private LongStringPairWritable outValue = new LongStringPairWritable();
 
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 			String[] valueArray = value.toString().split(",");
-			int hours = Integer.parseInt(valueArray[12]);
+			String hoursStr = valueArray[12];
+			int hours = Integer.parseInt(hoursStr);
 			long tupleId = key.get(); //Integer.parseInt(valueArray[15]);
-			
+			outValue.setLong(tupleId); // tuple id
 			/*
 			 * Rule 1:
 			 * education --> educationnumber
 			 * */
-			outKey.set("1," + valueArray[3]); // rule id,  value of left-hand-site 
-			outValue.set(tupleId + "," + valueArray[4]); // tuple id, tuple value (educationnumber)			
+			outKey.setInt(1); // rule id
+			outKey.setString(valueArray[3]); // value of left-hand-side
+			
+			outValue.setString(valueArray[4]); // tuple value (educationnumber)
 			context.write(outKey, outValue);
 			
 			/*
@@ -65,8 +68,10 @@ public class DataCleanMR {
 			 * occupation | country --> hours
 			 * */
 			String occupationCountryKey = valueArray[6]+","+valueArray[13]; // occupation + country
-			outKey.set("2,"+occupationCountryKey); // rule id, value of left-hand-site
-			outValue.set(tupleId + "," + hours); // tuple id, tuple value			
+			outKey.setInt(2);
+			outKey.setString(occupationCountryKey);
+
+			outValue.setString(hoursStr);
 			context.write(outKey, outValue);
 			
 			/*
@@ -74,10 +79,11 @@ public class DataCleanMR {
 			 * if hours <= 20 --> salary <= 50 or if hours >= 60 ---> >50
 			 * */
 			String salary = valueArray[14];
-			String vialationSalary = tupleId + "," + salary;// tuple id, tuple value			
 			if((hours<=20 && !salary.equals("<=50K")) || (hours>=60 && !salary.equals(">50K"))){
-				outKey.set("3,"+hours); // rule id, value of left-hand-site
-				outValue.set(vialationSalary); // tuple id, tuple value			
+				outKey.setInt(3);
+				outKey.setString(valueArray[12]); // hours
+
+				outValue.setString(salary);
 				context.write(outKey, outValue);
 			}
 		
@@ -85,8 +91,10 @@ public class DataCleanMR {
 			 * Rule 4
 			 * occupation | country | hours --> salary
 			 * */
-			outKey.set("4,"+occupationCountryKey + hours); // rule id, value of left-hand-site
-			outValue.set(vialationSalary); // tuple id, tuple value			
+			outKey.setInt(4);
+			outKey.setString(occupationCountryKey + hours);
+
+			outValue.setString(salary);
 			context.write(outKey, outValue);
 		}
 	}
@@ -99,26 +107,26 @@ public class DataCleanMR {
 		}
 		
 	}
+	
 
-	public static class FDReducer extends Reducer<Text, Text, Text, Text> {
-		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+	public static class FDReducer extends Reducer<IntStringPairWritable, LongStringPairWritable, Text, Text> {
+		public void reduce(IntStringPairWritable key, Iterable<LongStringPairWritable> values, Context context) throws IOException, InterruptedException {
 			boolean violationOccured = false;
-			int ruleId = Integer.parseInt(key.toString().split(",")[0]);			
+			int ruleId = key.getInt();			
 			int violationId = context.getTaskAttemptID().getTaskID().getId();
 			Set<Text> violationTable = new HashSet<Text>();
 			String previousAttrValue = null;
-			String[] splittedValues;
 			String violation;
 			
 			
-			for (Text value : values) {
-				splittedValues = value.toString().split(",");
-				String attrValue = splittedValues[1]; 
+			for (LongStringPairWritable value : values) {
+
+				String attrValue = value.getString(); 
 				if (previousAttrValue == null) {
 					previousAttrValue = attrValue;
 				}
 				
-				violation = generateVialotionTableRaw(ruleId, violationId, Integer.parseInt(splittedValues[0]), attrValue);
+				violation = generateVialotionTableRaw(ruleId, violationId, value.getLong(), attrValue);
 				
 				violationTable.add(new Text(violation));
 				
@@ -135,8 +143,15 @@ public class DataCleanMR {
 			}
 			violationTable = null;
 		}
-		
-		private String generateVialotionTableRaw(int ruleId, int reducerId, int tupleId, String attrValue){
+		/**
+		 * 
+		 * @param ruleId
+		 * @param violationId
+		 * @param tupleId
+		 * @param attrValue
+		 * @return
+		 */
+		private String generateVialotionTableRaw(int ruleId, int violationId, long tupleId, String attrValue){
 			String attributeName = "";
 			switch(ruleId){
 				case 1:
@@ -153,7 +168,7 @@ public class DataCleanMR {
 					attributeName = "";
 			}
 			return String.format("%d;%d;%s;%d;%s;%s",
-					reducerId,
+					violationId,
 					ruleId,
 					TABLE_NAME,
 					tupleId,
@@ -178,8 +193,8 @@ public class DataCleanMR {
 		//job.setCombinerClass(IntSumReducer.class);
 		job.setReducerClass(FDReducer.class);
 		job.setNumReduceTasks(16);
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(Text.class);
+		job.setOutputKeyClass(IntStringPairWritable.class);
+		job.setOutputValueClass(LongStringPairWritable.class);
 		FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
 		FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
 		System.exit(job.waitForCompletion(true) ? 0 : 1);
