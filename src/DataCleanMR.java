@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
@@ -110,10 +111,12 @@ public class DataCleanMR {
 	
 
 	public static class FDReducer extends Reducer<IntStringPairWritable, LongStringPairWritable, Text, Text> {
+		Random randomGen = new Random(System.currentTimeMillis());
+		
 		public void reduce(IntStringPairWritable key, Iterable<LongStringPairWritable> values, Context context) throws IOException, InterruptedException {
 			boolean violationOccured = false;
 			int ruleId = key.getInt();			
-			int violationId = context.getTaskAttemptID().getTaskID().getId();
+			int violationId = context.getTaskAttemptID().getTaskID().getId() + randomGen.nextInt(Integer.MAX_VALUE);
 			Set<Text> violationTable = new HashSet<Text>();
 			String previousAttrValue = null;
 			String violation;

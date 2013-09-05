@@ -41,9 +41,13 @@ public class IntStringPairWritable implements WritableComparable<IntStringPairWr
 	}
 
 	@Override
-	public int compareTo(IntStringPairWritable arg0) {
-		// This is because we don't need any sorting
-		return 0;
+	public int compareTo(IntStringPairWritable o) {
+		int res = this.intVal - o.intVal;
+		if (res == 0) {
+			return this.strVal.compareTo(o.strVal);
+		} else {
+			return res;
+		}
 	}
 	
 }
