@@ -1,5 +1,9 @@
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -79,18 +83,18 @@ public class DataCleanMR {
 			outKey.setInt(2);
 			outKey.setString(occupationCountryKey);
 
-			outValue.setString(hoursStr);
+			outValue.setString(hoursStr+"|"+salary);
 			context.write(outKey, outValue);
 			
 			/*
 			 * Rule 4
 			 * occupation | country | hours --> salary
 			 * */
-			outKey.setInt(4);
-			outKey.setString(occupationCountryKey + hours);
+//			outKey.setInt(4);
+//			outKey.setString(occupationCountryKey + hours);
 
-			outValue.setString(salary);
-			context.write(outKey, outValue);
+//			outValue.setString(salary);
+//			context.write(outKey, outValue);
 			
 			/*
 			 * Rule 3:
@@ -120,7 +124,14 @@ public class DataCleanMR {
 
 	public static class FDReducer extends Reducer<IntStringPairWritable, LongStringPairWritable, Text, Text> {
 		Random randomGen = new Random(System.currentTimeMillis());
-		
+		private class TupleValue{
+			public TupleValue(long tId, String v) {
+				tupleId = tId;
+				value = v;
+			}
+			public long tupleId;
+			public String value;
+		}
 		public void reduce(IntStringPairWritable key, Iterable<LongStringPairWritable> values, Context context) throws IOException, InterruptedException {
 			boolean violationOccured = false;
 			int ruleId = key.getInt();			
@@ -128,11 +139,27 @@ public class DataCleanMR {
 			Set<Text> violationTable = new HashSet<Text>();
 			String previousAttrValue = null;
 			String violation;
+			String attrValue;
 			
+			String[] valuesArray;
+			String keyTupleSet;
+			String salary;
+			//Set<TupleValue> tupleSet = new HashSet<TupleValue>();
+			Map<String, Set<TupleValue>> tuplesSet = new HashMap<String, Set<TupleValue>>();
 			
 			for (LongStringPairWritable value : values) {
-
-				String attrValue = value.getString(); 
+				if(ruleId == 2) {
+					valuesArray = value.getString().split("\\|");
+					attrValue = valuesArray[0];
+					salary = valuesArray[1];
+					keyTupleSet = key.getString() + "," + attrValue;
+					if(!tuplesSet.containsKey(keyTupleSet)){
+						tuplesSet.put(keyTupleSet, new HashSet<TupleValue>());
+					}
+					tuplesSet.get(keyTupleSet).add(new TupleValue(value.getLong(), salary));
+				}else{
+					attrValue = value.getString();
+				}
 				if (previousAttrValue == null) {
 					previousAttrValue = attrValue;
 				}
@@ -144,6 +171,8 @@ public class DataCleanMR {
 				if (!violationOccured && !attrValue.equals(previousAttrValue)) {
 					violationOccured = true;
 				}
+				
+				
 				//previousAttrValue = attrValue;
 			}
 			
@@ -153,6 +182,37 @@ public class DataCleanMR {
 				}
 			}
 			violationTable = null;
+			
+			if(tuplesSet.size()>0){
+				List<String> tupleKeys = new ArrayList(tuplesSet.keySet());
+				violationTable = new HashSet<Text>();
+				ruleId = 4;
+				for (String tupleKey : tupleKeys) {
+					violationTable = new HashSet<Text>();
+					violationOccured = false;
+					violationId = context.getTaskAttemptID().getTaskID().getId() + randomGen.nextInt(Integer.MAX_VALUE);
+					previousAttrValue = null;
+					for(TupleValue tupleValue : tuplesSet.get(tupleKey)){
+						attrValue = tupleValue.value;
+						if (previousAttrValue == null) {
+							previousAttrValue = attrValue;
+						}
+						violation = generateVialotionTableRaw(ruleId, violationId, tupleValue.tupleId, attrValue);
+						
+						violationTable.add(new Text(violation));
+						
+						if (!violationOccured && !attrValue.equals(previousAttrValue)) {
+							violationOccured = true;
+						}
+					}
+					if (violationOccured) {
+						for (Text v : violationTable) {
+							context.write(v, null);
+						}
+					}
+				}
+				
+			}
 		}
 		/**
 		 * 
